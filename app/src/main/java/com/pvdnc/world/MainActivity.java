@@ -108,6 +108,9 @@ public class MainActivity extends AppCompatActivity {
                        return;
                    }
                    Log.d(TAG,"requestLoadDex ret:"+result);
+
+                   //列出已经添加的进程列表
+                   Log.d(TAG,"list of attached processes:\n"+mService.listClient());
                }catch (Exception e){
                    e.printStackTrace();
                }

@@ -10,7 +10,9 @@ import android.util.Log;
 import android.util.SparseArray;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -92,6 +94,23 @@ public class DexService extends IDexService.Stub {
             }
         }
         Binder.restoreCallingIdentity(token);
+    }
+
+    @Override
+    public List<ProcessRecord> listClient() throws RemoteException {
+        List<ProcessRecord> clientList=new ArrayList<>();
+
+        long token=Binder.clearCallingIdentity();
+        synchronized (mPidTargetMap){
+            for (int i = 0; i < mPidTargetMap.size(); i++) {
+                int pid=mPidTargetMap.keyAt(i);
+                IDexService target=mPidTargetMap.get(pid);
+                clientList.add(new ProcessRecord(pid,target.asBinder()));
+            }
+        }
+        Binder.restoreCallingIdentity(token);
+
+        return clientList;
     }
 
     public IDexService getClient(int targetPid){
@@ -192,6 +211,7 @@ public class DexService extends IDexService.Stub {
 
     private void invokeRemoveAllPartSessionCreatedByPid(int fromPid){
         synchronized (mPidTargetMap){
+            Log.d(TAG,"there are "+mPidTargetMap.size()+" processes attached");
             for (int i = 0; i < mPidTargetMap.size(); i++) {
                 IDexService target=mPidTargetMap.valueAt(i);
                 if(target==null)

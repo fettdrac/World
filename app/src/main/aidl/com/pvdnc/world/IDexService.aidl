@@ -2,6 +2,7 @@
 package com.pvdnc.world;
 
 // Declare any non-default types here with import statements
+import com.pvdnc.world.ProcessRecord;
 
 interface IDexService {
     /**
@@ -9,6 +10,8 @@ interface IDexService {
      * and return values in AIDL.
      */
      void addClient(IBinder caller);
+
+     List<ProcessRecord> listClient();
 
      int requestWritePart(int targetPid,String sessionName,String dataBase64);
 
