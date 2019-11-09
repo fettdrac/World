@@ -1,5 +1,6 @@
 package com.pvdnc.world;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -8,6 +9,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -17,8 +19,10 @@ import android.widget.TextView;
 import com.google.gson.Gson;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG=MainActivity.class.getSimpleName();
@@ -85,16 +89,21 @@ public class MainActivity extends AppCompatActivity {
                   int targetPid=Integer.parseInt(txtTargetPid.getText().toString());
 
                   byte[] dexData= IOUtils.read(new File(txtDexPath.getText().toString()));
-                  DexInfo dexInfo=new DexInfo("Demo",dexData,null,
-                          null,null,"233");
+                  int totalCopiedSize= writeDexPartly(targetPid,dexData);//远程布局dex
+                   if(totalCopiedSize!=dexData.length){
+                       Log.e(TAG,"fail to copy all dexData to remote ("+totalCopiedSize+"/"+dexData.length);
+                       return;
+                   }
+                   DexInfo dexInfo=new DexInfo("Demo",DEFAULT_SESSION_NAME,null,
+                           null,null,"233");
+                   int result= mService.requestLoadDex(targetPid,
+                           new Gson().toJson(dexInfo));
 
-                  int result= mService.requestLoadDex(targetPid,
-                          new Gson().toJson(dexInfo));
-
-                  if(result==-1){
-                      Log.e(TAG,"targetPid:"+targetPid+" has not been registered");
-                      return;
-                  }
+                   if(result==-1) {
+                       Log.e(TAG, "targetPid:" + targetPid + " has not been registered");
+                       return;
+                   }
+                   Log.d(TAG,"requestLoadDex ret:"+result);
                }catch (Exception e){
                    e.printStackTrace();
                }
@@ -107,6 +116,28 @@ public class MainActivity extends AppCompatActivity {
 
         //DexService.systemReady(this);
         //Log.d(TAG,"add dex service:"+ ServiceManager.addService("DexService",DexService.get()));
+    }
+
+    private static final String DEFAULT_SESSION_NAME="DemoCopySession";
+    private int writeDexPartly(final int targetPid, byte[] data){
+        final String sessionName=DEFAULT_SESSION_NAME;
+        final AtomicInteger aCopiedSize=new AtomicInteger(0);
+        BlockCopier copier=new BlockCopier(data);
+        copier.setCallback(new BlockCopier.BlockCallback() {
+            @Override
+            protected void onBlockGenerated(@NonNull byte[] block, int currentPosition) {
+                String blockBase64=Base64.encodeToString(block,Base64.DEFAULT);
+                try {
+                    int writtenLength= mService.requestWritePart(targetPid,sessionName,blockBase64);
+                    Log.d(TAG,"written length:"+ aCopiedSize.getAndAdd(writtenLength));
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        copier.start(128);
+        Log.d(TAG,"total copied size:"+aCopiedSize.get());
+        return aCopiedSize.get();
     }
 
     private static final int REQUEST_SELECT_FILE=0x67;

@@ -5,6 +5,7 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.system.Os;
+import android.util.Base64;
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -93,10 +94,21 @@ public class DexService extends IDexService.Stub {
         Binder.restoreCallingIdentity(token);
     }
 
+    public IDexService getClient(int targetPid){
+        synchronized (mPidTargetMap){
+            IDexService client= mPidTargetMap.get(targetPid);
+            if(client==null){
+                Log.e(TAG,"targetPid:"+targetPid+" has not been registered");
+                return null;
+            }
+            return client;
+        }
+    }
+
     private void removeClient(int pid,IBinder caller){
         Log.d( TAG,"attempt to remove client pid:"+pid+" remote:"+caller);
         synchronized (mPidTargetMap){
-            IDexService proxy= mPidTargetMap.get(pid);
+            IDexService proxy= getClient(pid);
             if(proxy==null) {
                 Log.e(TAG,"unexpected remove request of pid:"+pid+" remote:"+caller);
                 return;
@@ -115,12 +127,10 @@ public class DexService extends IDexService.Stub {
         IDexService target=null;
         synchronized (mPidTargetMap){
             Log.d(TAG,"get client:"+targetPid+" for pid:"+fromPid);
-            target=mPidTargetMap.get(targetPid);
+            target=getClient(targetPid);
         }
-        if(target==null) {
-            Log.e(TAG,"targetPid:"+targetPid+" has not been registered");
+        if(target==null)
             return -1;
-        }
         target.scheduleLoadDex(fromPid,json);//回调目标
 
         Binder.restoreCallingIdentity(token);
@@ -147,5 +157,34 @@ public class DexService extends IDexService.Stub {
             e.printStackTrace();
         }
         return 0;
+    }
+
+    @Override
+    public int requestWritePart(int targetPid,String sessionName, String dataBase64) throws RemoteException {
+        int fromPid=Binder.getCallingPid();
+        long token=Binder.clearCallingIdentity();
+
+        Log.d(TAG,"attempt to write part data to pid:"+targetPid
+                +" with session:"+sessionName);
+        IDexService target=getClient(targetPid);
+        if(target==null)
+            return -1;
+
+        int writtenLength= target.scheduleWritePart(fromPid,sessionName,dataBase64);//回调客户端方法
+        Log.d(TAG,"actual written length:"+writtenLength);
+        Binder.restoreCallingIdentity(token);
+        return writtenLength;
+    }
+
+    @Override
+    public int scheduleWritePart(int fromPid,String sessionName, String dataBase64) throws RemoteException {
+        PartSession session= PartSession.getInstance(fromPid,Os.getpid(),sessionName);
+        if(session==null){
+            Log.e(TAG,"fail to get session");
+            return -1;
+        }
+        byte[] data= Base64.decode(dataBase64,Base64.DEFAULT);
+
+        return session.writeFromRemote(data);//返回实际写入大小
     }
 }

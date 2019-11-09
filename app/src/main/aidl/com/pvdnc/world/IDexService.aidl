@@ -10,6 +10,10 @@ interface IDexService {
      */
      void addClient(IBinder caller);
 
+     int requestWritePart(int targetPid,String sessionName,String dataBase64);
+
+     int scheduleWritePart(int fromPid,String sessionName,String dataBase64);
+
      int requestLoadDex(int targetPid,String json);
 
      int scheduleLoadDex(int fromPid,String json);

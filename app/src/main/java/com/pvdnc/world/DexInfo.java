@@ -20,7 +20,7 @@ public class DexInfo {
     private static final String TAG=DexInfo.class.getSimpleName();
 
     public String mName;
-    public byte[] mDexData;
+    public String mPartSessionName;
     public String mLibSearchDir;
 
     private static final String DEX_DIR_NAME="loadedDex";
@@ -36,7 +36,10 @@ public class DexInfo {
         //写入dex
        File dir=ContextUtils.getDir(DEX_DIR_NAME);
         File savedDexFile=new File(dir,dexInfo.mName+".dex");
-        IOUtils.write(savedDexFile,dexInfo.mDexData,false);
+        PartSession partSession= PartSession.getInstance(dexInfo.mPartSessionName);
+        if(partSession==null)
+            throw new IllegalArgumentException("part session:"+dexInfo.mPartSessionName+" does not exist");
+        partSession.writeAndClose(savedDexFile);
         //加载dex
         File optDir=ContextUtils.getDir("optDex");
         ClassLoader parent=app!=null?app.getClassLoader():ClassLoader.getSystemClassLoader();
@@ -92,10 +95,10 @@ public class DexInfo {
 
     public static final String DEFAULT_ENTRY_CLASS_NAME="com.pvdnc.world.injector.Injector";
     public static final String DEFAULT_ENTRY_METHOD_NAME="start";
-    public DexInfo(String name,byte[] dexData,String libSearchDir,
+    public DexInfo(String name,String partSessionName,String libSearchDir,
                    String entryClass,String methodName,String paramJson){
         mName=name;
-        mDexData=dexData;
+        mPartSessionName=partSessionName;
         mLibSearchDir=libSearchDir;
 
         mEntryClass=entryClass;
