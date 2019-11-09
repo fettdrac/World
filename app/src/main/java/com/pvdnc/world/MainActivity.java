@@ -1,7 +1,10 @@
 package com.pvdnc.world;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
@@ -11,7 +14,11 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import com.google.gson.Gson;
+
+import java.io.File;
 import java.util.List;
+import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG=MainActivity.class.getSimpleName();
@@ -20,6 +27,8 @@ public class MainActivity extends AppCompatActivity {
     static {
         System.loadLibrary("native-lib");
     }
+
+    private EditText txtDexPath;
 
     private IDexService mService;
     @Override
@@ -52,6 +61,20 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        txtDexPath=findViewById(R.id.txtDexPath);
+        Button cmdBrowse=findViewById(R.id.cmdBrowse);
+        cmdBrowse.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent=new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("*/*");
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                //调用选择Activity
+                Intent resultIntent= Intent.createChooser(intent,"Select File");
+                startActivityForResult(resultIntent,REQUEST_SELECT_FILE);
+            }
+        });
+
         final EditText txtTargetPid=findViewById(R.id.txtTargetPid);
         Button cmdPushRequest=findViewById(R.id.cmdPushRequest);
         cmdPushRequest.setOnClickListener(new View.OnClickListener() {
@@ -60,7 +83,14 @@ public class MainActivity extends AppCompatActivity {
                connectToService();
                try{
                   int targetPid=Integer.parseInt(txtTargetPid.getText().toString());
-                  int result= mService.requestLoadDex(targetPid,"233");
+
+                  byte[] dexData= IOUtils.read(new File(txtDexPath.getText().toString()));
+                  DexInfo dexInfo=new DexInfo("Demo",dexData,null,
+                          null,null,"233");
+
+                  int result= mService.requestLoadDex(targetPid,
+                          new Gson().toJson(dexInfo));
+
                   if(result==-1){
                       Log.e(TAG,"targetPid:"+targetPid+" has not been registered");
                       return;
@@ -77,6 +107,24 @@ public class MainActivity extends AppCompatActivity {
 
         //DexService.systemReady(this);
         //Log.d(TAG,"add dex service:"+ ServiceManager.addService("DexService",DexService.get()));
+    }
+
+    private static final int REQUEST_SELECT_FILE=0x67;
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        switch (requestCode){
+            case REQUEST_SELECT_FILE:{
+                Objects.requireNonNull(data);
+                Uri uri=  data.getData();
+                Log.d(TAG,"uri:"+uri);
+                Objects.requireNonNull(uri);
+                String path=uri.getPath();
+                Log.d(TAG,"uri path:"+path);
+                txtDexPath.setText(path);
+                break;
+            }
+        }
     }
 
     private void connectToService(){

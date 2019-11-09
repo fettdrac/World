@@ -8,8 +8,12 @@ import android.system.Os;
 import android.util.Log;
 import android.util.SparseArray;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 public class DexService extends IDexService.Stub {
@@ -123,10 +127,25 @@ public class DexService extends IDexService.Stub {
         return 0;
     }
 
+    private final Map<String,DexInfo> mNameDexInfoMap=new HashMap<>();
+
+    private void putDexInfo(@NonNull DexInfo dexInfo){
+        synchronized (mNameDexInfoMap){
+            mNameDexInfoMap.put(dexInfo.mName,dexInfo);
+        }
+    }
+
     @Override
     public int scheduleLoadDex(int fromPid, String json) throws RemoteException {
         Log.d(TAG,"receive request of loading dex from pid:"+fromPid);
         Log.d(TAG,"json:"+json);
+        try {
+            DexInfo dexInfo=DexInfo.newInstance(json);
+            putDexInfo(dexInfo);
+            return dexInfo.executeNoException(null);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return 0;
     }
 }
