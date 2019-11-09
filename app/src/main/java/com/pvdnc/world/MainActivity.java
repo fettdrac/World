@@ -96,6 +96,12 @@ public class MainActivity extends AppCompatActivity {
                   int totalCopiedSize= writeDexPartly(targetPid,dexData);//远程布局dex
                    if(totalCopiedSize!=dexData.length){
                        Log.e(TAG,"fail to copy all dexData to remote ("+totalCopiedSize+"/"+dexData.length);
+                       /*
+                       It is known to be insecure that dex part data might not be fully copied.
+                        However,it seems to be fully copied by observing dex file saved in target app's data dir.
+                        If someone could solve the question that  **writeDexPartly** return wrong size of copied size,
+                        pull request or directly comments are both welcomed and appreciated.
+                       */
                        //return;
                    }
                    DexInfo dexInfo=new DexInfo("Demo",DEFAULT_SESSION_NAME,null,
