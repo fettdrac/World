@@ -14,6 +14,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import dalvik.system.DexClassLoader;
 
 public class DexInfo {
@@ -74,7 +76,7 @@ public class DexInfo {
         }
     }
 
-    public synchronized int executeNoException(ClassLoader loader){
+    public synchronized int executeNoException(@Nullable ClassLoader loader){
         int retCode=-9;
         try {
             if(mLoader==null)

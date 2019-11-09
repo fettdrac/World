@@ -115,6 +115,8 @@ public class DexService extends IDexService.Stub {
             }
             if(!proxy.asBinder().equals(caller))//必须保证两个都相同
                 return;
+            //进行删除操作
+            invokeRemoveAllPartSessionCreatedByPid(pid);
             Log.e( TAG,"remove client pid:"+pid+" remote:"+caller);
             mPidTargetMap.remove(pid);
         }
@@ -164,8 +166,8 @@ public class DexService extends IDexService.Stub {
         int fromPid=Binder.getCallingPid();
         long token=Binder.clearCallingIdentity();
 
-        Log.d(TAG,"attempt to write part data to pid:"+targetPid
-                +" with session:"+sessionName);
+        //Log.d(TAG,"attempt to write part data to pid:"+targetPid
+               // +" with session:"+sessionName);
         IDexService target=getClient(targetPid);
         if(target==null)
             return -1;
@@ -186,5 +188,26 @@ public class DexService extends IDexService.Stub {
         byte[] data= Base64.decode(dataBase64,Base64.DEFAULT);
 
         return session.writeFromRemote(data);//返回实际写入大小
+    }
+
+    private void invokeRemoveAllPartSessionCreatedByPid(int fromPid){
+        synchronized (mPidTargetMap){
+            for (int i = 0; i < mPidTargetMap.size(); i++) {
+                IDexService target=mPidTargetMap.valueAt(i);
+                if(target==null)
+                    continue;
+                try {
+                    target.scheduleRemoveAllPartSessionCreatedByPid(fromPid);
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public void scheduleRemoveAllPartSessionCreatedByPid(int fromPid) throws RemoteException {
+        PartSession.removeAllCreatedByPid(fromPid);
+        Log.d(TAG,"all sessions created by pid:"+fromPid+" has been removed");
     }
 }

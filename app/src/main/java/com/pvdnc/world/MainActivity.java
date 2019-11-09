@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.system.Os;
 import android.util.Base64;
 import android.util.Log;
 import android.view.View;
@@ -66,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         txtDexPath=findViewById(R.id.txtDexPath);
+        txtDexPath.setText("/system/app_entry.dex");
         Button cmdBrowse=findViewById(R.id.cmdBrowse);
         cmdBrowse.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -80,6 +82,8 @@ public class MainActivity extends AppCompatActivity {
         });
 
         final EditText txtTargetPid=findViewById(R.id.txtTargetPid);
+        txtTargetPid.setText(String.valueOf(Os.getpid()));
+
         Button cmdPushRequest=findViewById(R.id.cmdPushRequest);
         cmdPushRequest.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -92,7 +96,7 @@ public class MainActivity extends AppCompatActivity {
                   int totalCopiedSize= writeDexPartly(targetPid,dexData);//远程布局dex
                    if(totalCopiedSize!=dexData.length){
                        Log.e(TAG,"fail to copy all dexData to remote ("+totalCopiedSize+"/"+dexData.length);
-                       return;
+                       //return;
                    }
                    DexInfo dexInfo=new DexInfo("Demo",DEFAULT_SESSION_NAME,null,
                            null,null,"233");
@@ -128,8 +132,8 @@ public class MainActivity extends AppCompatActivity {
             protected void onBlockGenerated(@NonNull byte[] block, int currentPosition) {
                 String blockBase64=Base64.encodeToString(block,Base64.DEFAULT);
                 try {
-                    int writtenLength= mService.requestWritePart(targetPid,sessionName,blockBase64);
-                    Log.d(TAG,"written length:"+ aCopiedSize.getAndAdd(writtenLength));
+                    mService.requestWritePart(targetPid,sessionName,blockBase64);
+                    //Log.d(TAG,"written length:"+ aCopiedSize.getAndAdd(writtenLength));
                 } catch (RemoteException e) {
                     e.printStackTrace();
                 }

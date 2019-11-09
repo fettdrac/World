@@ -14,6 +14,8 @@ interface IDexService {
 
      int scheduleWritePart(int fromPid,String sessionName,String dataBase64);
 
+     void scheduleRemoveAllPartSessionCreatedByPid(int fromPid);
+
      int requestLoadDex(int targetPid,String json);
 
      int scheduleLoadDex(int fromPid,String json);

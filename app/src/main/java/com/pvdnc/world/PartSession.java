@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class PartSession {
     private static final String TAG=PartSession.class.getSimpleName();
@@ -32,8 +33,9 @@ public class PartSession {
                Log.e(TAG,"get or create instance of PartSession for:"+fromPid+" ("+name+")");
                return null;
            }
-           if(instance.mFromPid==fromPid
-           &&instance.mToPid==toPid)
+           boolean valid=instance.mFromPid==fromPid
+                   &&instance.mToPid==toPid;
+           if(valid)
                return instance;
            Log.e(TAG,"instance:"+instance+" is not created by pid:"+fromPid);
            return null;
@@ -44,6 +46,18 @@ public class PartSession {
         return sInstanceMap.get(name);
     }
 
+    public static void removeAllCreatedByPid(int fromPid){
+        synchronized (sInstanceMap) {
+            Set<Map.Entry<String,PartSession>> entrySet=sInstanceMap.entrySet();
+            for (Map.Entry<String, PartSession> entry : entrySet) {
+                if(entry.getValue().mFromPid!=fromPid)
+                    continue;
+                Log.d(TAG,"attempt to remove:"+entry.getKey());
+                sInstanceMap.remove(entry.getKey());
+            }
+        }
+    }
+
     public int mFromPid;
     public String mName;
 
@@ -51,6 +65,8 @@ public class PartSession {
 
     public PartSession(int fromPid,int toPid,String name){
         mFromPid= fromPid;
+        mToPid=toPid;
+
         mName=name;
     }
 
@@ -65,6 +81,7 @@ public class PartSession {
     public void writeAndClose(File file) throws IOException {
         synchronized (mOS) {
             byte[] data = mOS.toByteArray();
+            Log.d(TAG,"data built length:"+data.length);
             IOUtils.write(file,data,false);
             close();
         }
